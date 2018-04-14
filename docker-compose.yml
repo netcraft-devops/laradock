@@ -165,14 +165,36 @@ services:
 
 ### MongoDB Container #######################################
 
-    mongo:
+    mongo1:
       build: ./mongo
       ports:
-        - "${MONGODB_PORT}:27017"
+        - "${MONGODB_PORT_1}:27017"
       volumes:
         - ${DATA_SAVE_PATH}/mongo:/data/db
       networks:
         - backend
+      container_name: mongo1
+
+    mongo2:
+      build: ./mongo
+      ports:
+        - "${MONGODB_PORT_2}:27017"
+      volumes:
+        - ${DATA_SAVE_PATH}/mongo2:/data/db
+      networks:
+        - backend
+      container_name: mongo2
+
+    mongo3:
+      build: ./mongo
+      ports:
+        - "${MONGODB_PORT_3}:27017"
+      volumes:
+        - ${DATA_SAVE_PATH}/mongo3:/data/db
+      networks:
+        - backend
+      container_name: mongo3
+
 
 ### Redis Container #########################################
 
@@ -240,6 +262,24 @@ services:
         - frontend
         - backend
 
+### Transporter #######################################
+
+    transporter:
+      build:
+        context: ./transporter
+      environment:
+        - MONGODB_NAME=shoppar
+        - MONGODB_URI=${MONGODB_URI}
+        - ELASTICSEARCH_URI=${ELASTICSEARCH_URI}
+      depends_on:
+        - elasticsearch
+        - mongo1
+        - mongo2
+        - mongo3
+      networks:
+        - frontend
+        - backend
+
 ### Certbot Container ##################################
 
     certbot:
@@ -266,6 +306,7 @@ services:
         - backend
 
 ### Laravel Echo Server #######################################
+
     laravel-echo-server:
       build:
         context: ./laravel-echo-server
@@ -294,7 +335,11 @@ volumes:
     driver: "local"
   redis:
     driver: "local"
-  mongo:
+  mongo1:
+    driver: "local"
+  mongo2:
+    driver: "local"
+  mongo3:
     driver: "local"
   phpmyadmin:
     driver: "local"
