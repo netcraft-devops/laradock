@@ -1,13 +1,13 @@
-ARG MYSQL_VERSION=latest
+ARG MYSQL_VERSION=5.7
 FROM mysql:${MYSQL_VERSION}
 
-LABEL maintainer="Mahmoud Zalt <mahmoud@zalt.me>"
+MAINTAINER Mahmoud Zalt <mahmoud@zalt.me>
 
 #####################################
 # Set Timezone
 #####################################
 
-ARG TZ=UTC
+ARG TZ=UTC+2
 ENV TZ ${TZ}
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 

@@ -1,6 +1,6 @@
 FROM phpmyadmin/phpmyadmin
 
-LABEL maintainer="Bo-Yi Wu <appleboy.tw@gmail.com>"
+MAINTAINER Bo-Yi Wu <appleboy.tw@gmail.com>
 
 # Add volume for sessions to allow session persistence
 VOLUME /sessions

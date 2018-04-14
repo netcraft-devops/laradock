@@ -19,14 +19,14 @@ services:
           - INSTALL_IMAP=${WORKSPACE_INSTALL_IMAP}
           - INSTALL_MONGO=${WORKSPACE_INSTALL_MONGO}
           - INSTALL_PHPREDIS=${WORKSPACE_INSTALL_PHPREDIS}
+          - INSTALL_MSSQL=${WORKSPACE_INSTALL_MSSQL}
           - INSTALL_NODE=${WORKSPACE_INSTALL_NODE}
-          - NPM_REGISTRY=${WORKSPACE_NPM_REGISTRY}
           - INSTALL_YARN=${WORKSPACE_INSTALL_YARN}
           - INSTALL_DRUSH=${WORKSPACE_INSTALL_DRUSH}
           - INSTALL_DRUPAL_CONSOLE=${WORKSPACE_INSTALL_DRUPAL_CONSOLE}
+          - INSTALL_AEROSPIKE=${WORKSPACE_INSTALL_AEROSPIKE}
           - INSTALL_V8JS=${WORKSPACE_INSTALL_V8JS}
           - COMPOSER_GLOBAL_INSTALL=${WORKSPACE_COMPOSER_GLOBAL_INSTALL}
-          - COMPOSER_REPO_PACKAGIST=${WORKSPACE_COMPOSER_REPO_PACKAGIST}
           - INSTALL_WORKSPACE_SSH=${WORKSPACE_INSTALL_WORKSPACE_SSH}
           - INSTALL_LARAVEL_ENVOY=${WORKSPACE_INSTALL_LARAVEL_ENVOY}
           - INSTALL_LARAVEL_INSTALLER=${WORKSPACE_INSTALL_LARAVEL_INSTALLER}
@@ -40,7 +40,6 @@ services:
           - INSTALL_TERRAFORM=${WORKSPACE_INSTALL_TERRAFORM}
           - INSTALL_DUSK_DEPS=${WORKSPACE_INSTALL_DUSK_DEPS}
           - INSTALL_PG_CLIENT=${WORKSPACE_INSTALL_PG_CLIENT}
-          - INSTALL_SWOOLE=${WORKSPACE_INSTALL_SWOOLE}
           - PUID=${WORKSPACE_PUID}
           - PGID=${WORKSPACE_PGID}
           - CHROME_DRIVER_VERSION=${WORKSPACE_CHROME_DRIVER_VERSION}
@@ -67,11 +66,10 @@ services:
         args:
           - INSTALL_XDEBUG=${PHP_FPM_INSTALL_XDEBUG}
           - INSTALL_SOAP=${PHP_FPM_INSTALL_SOAP}
-          - INSTALL_IMAP=${PHP_FPM_INSTALL_IMAP}
           - INSTALL_MONGO=${PHP_FPM_INSTALL_MONGO}
+          - INSTALL_MSSQL=${PHP_FPM_INSTALL_MSSQL}
           - INSTALL_ZIP_ARCHIVE=${PHP_FPM_INSTALL_ZIP_ARCHIVE}
           - INSTALL_BCMATH=${PHP_FPM_INSTALL_BCMATH}
-          - INSTALL_GMP=${PHP_FPM_INSTALL_GMP}
           - INSTALL_PHPREDIS=${PHP_FPM_INSTALL_PHPREDIS}
           - INSTALL_MEMCACHED=${PHP_FPM_INSTALL_MEMCACHED}
           - INSTALL_OPCACHE=${PHP_FPM_INSTALL_OPCACHE}
@@ -165,36 +163,62 @@ services:
 
 ### MongoDB Container #######################################
 
-    mongo1:
+    mongo:
       build: ./mongo
       ports:
-        - "${MONGODB_PORT_1}:27017"
+        - "${MONGODB_PORT}:27017"
       volumes:
         - ${DATA_SAVE_PATH}/mongo:/data/db
       networks:
         - backend
-      container_name: mongo1
+    mongo1:
+      build: ./mongo
+      volumes:
+        - ${DATA_SAVE_PATH}/mongo1:/data/db
+      networks:
+        - backend
+      restart: always
+      environment:
+        MONGO_ROLE: primary
+      tty: true
+      hostname: mongo1
+      image: ongoworks/mongo-rep-set:latest
+      links:
+      - mongo2:mongo2
+      - mongo3:mongo3
+      stdin_open: true
 
     mongo2:
       build: ./mongo
-      ports:
-        - "${MONGODB_PORT_2}:27017"
       volumes:
         - ${DATA_SAVE_PATH}/mongo2:/data/db
       networks:
         - backend
-      container_name: mongo2
+      restart: always
+      tty: true
+      hostname: mongo2
+      image: ongoworks/mongo-rep-set:latest
+      links:
+      - mongo1:mongo1
+      - mongo3:mongo3
+      stdin_open: true
 
     mongo3:
       build: ./mongo
-      ports:
-        - "${MONGODB_PORT_3}:27017"
       volumes:
         - ${DATA_SAVE_PATH}/mongo3:/data/db
       networks:
         - backend
-      container_name: mongo3
-
+      restart: always
+      environment:
+        JOURNALING: 'no'
+      tty: true
+      hostname: mongo3
+      image: ongoworks/mongo-rep-set:latest
+      links:
+      - mongo1:mongo1
+      - mongo2:mongo2
+      stdin_open: true
 
 ### Redis Container #########################################
 
@@ -224,23 +248,22 @@ services:
         - frontend
         - backend
 
-
 ### ElasticSearch Container #################################
 
     elasticsearch:
       build: ./elasticsearch
       volumes:
-        - elasticsearch-data:/usr/share/elasticsearch/data
-        - elasticsearch-plugins:/usr/share/elasticsearch/plugins
+        - ${DATA_SAVE_PATH}/elasticsearch-data:/usr/share/elasticsearch/data
+        - ${DATA_SAVE_PATH}/elasticsearch-plugins:/usr/share/elasticsearch/plugins
       environment:
         - cluster.name=laradock-cluster
         - bootstrap.memory_lock=true
-        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
       ulimits:
         memlock:
           soft: -1
           hard: -1
-      mem_limit: 1024m
+      mem_limit: 512m
       ports:
         - "${ELASTICSEARCH_HOST_HTTP_PORT}:9200"
         - "${ELASTICSEARCH_HOST_TRANSPORT_PORT}:9300"
@@ -249,6 +272,20 @@ services:
       networks:
         - frontend
         - backend
+
+### Transporter Container #################################
+
+    transporter:
+      build: ./transporter
+      environment:
+        - DB_NAME=${MONGODB_NAME}
+        - MONGODB_URI=${MONGODB_URI}
+        - ELASTICSEARCH_URI=${ELASTICSEARCH_URI}
+      depends_on:
+        - elasticsearch
+      networks:
+        - backend
+        - frontend
 
 ### Kibana Container #######################################
 
@@ -262,35 +299,17 @@ services:
         - frontend
         - backend
 
-### Transporter #######################################
-
-    transporter:
-      build:
-        context: ./transporter
-      environment:
-        - MONGODB_NAME=shoppar
-        - MONGODB_URI=${MONGODB_URI}
-        - ELASTICSEARCH_URI=${ELASTICSEARCH_URI}
-      depends_on:
-        - elasticsearch
-        - mongo1
-        - mongo2
-        - mongo3
-      networks:
-        - frontend
-        - backend
-
 ### Certbot Container ##################################
 
     certbot:
       build:
         context: ./certbot
       volumes:
-        - ./data/certbot/certs/:/var/certs
-        - ./certbot/letsencrypt/:/var/www/letsencrypt
+        - ${DATA_SAVE_PATH}/certbot/certs/:/var/certs
+        - ${DATA_SAVE_PATH}/certbot/letsencrypt/:/var/www/letsencrypt
       environment:
-        - CN="fake.domain.com"
-        - EMAIL="fake.email@gmail.com"
+        - CN="shoopas.com"
+        - EMAIL="kenneth@shoopas.com"
       networks:
         - frontend
 
@@ -333,13 +352,7 @@ networks:
 volumes:
   mysql:
     driver: "local"
-  redis:
-    driver: "local"
-  mongo1:
-    driver: "local"
-  mongo2:
-    driver: "local"
-  mongo3:
+  mongo:
     driver: "local"
   phpmyadmin:
     driver: "local"

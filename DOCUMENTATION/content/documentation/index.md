@@ -431,34 +431,14 @@ To learn more about how Docker publishes ports, please read [this excellent post
 
 
 
-<br>
-<a name="Use-Jenkins"></a>
-## Use Jenkins
-
-1) Boot the container `docker-compose up -d jenkins`. To enter the container type `docker-compose exec jenkins bash`.
-
-2) Go to `http://localhost:8090/` (if you didn't chanhed your default port mapping) 
-
-3) Authenticate from the web app.
-
-- Default username is `admin`.
-- Default password is `docker-compose exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword`. 
-
-(To enter container as root type `docker-compose exec --user root jenkins bash`).
-
-4) Install some plugins.
-
-5) Create your first Admin user, or continue as Admin.
-
-Note: to add user go to `http://localhost:8090/securityRealm/addUser` and to restart it from the web app visit `http://localhost:8090/restart`.
-
-You may wanna change the default security configuration, so go to `http://localhost:8090/configureSecurity/` under Authorization and choosing "Anyone can do anything" or "Project-based Matrix Authorization Strategy" or anything else.
-
-
-
 
 <br>
 <a name="Laravel"></a>
+
+
+
+
+
 
 <a name="Install-Laravel"></a>
 ## Install Laravel from a Docker Container
@@ -818,8 +798,6 @@ docker-compose up -d beanstalkd-console
 
 2 - Open your browser and visit `http://localhost:2080/`
 
-_Note: You can customize the port on which beanstalkd console is listening by changing `BEANSTALKD_CONSOLE_HOST_PORT` in `.env`. The default value is *2080*._
-
 3 - Add the server
 
 - Host: beanstalkd
@@ -1024,7 +1002,7 @@ To install CodeIgniter 3 on Laradock all you have to do is the following simple 
 
 4 - Run `docker-compose restart` if the container was already running, before the step above.
 
-5 - Visit `symfony.test`
+5 - Visit `symfony.dev`
 
 <br>
 <a name="Misc"></a>
@@ -1094,18 +1072,10 @@ To change the default forwarded port for ssh:
     ...
 ```
 
-Then login using:
 
-```bash
-ssh -o PasswordAuthentication=no    \
-    -o StrictHostKeyChecking=no     \
-    -o UserKnownHostsFile=/dev/null \
-    -p 2222                         \
-    -i workspace/insecure_id_rsa    \
-    laradock@localhost
-```
 
-To login as root, replace laradock@locahost with root@localhost.
+
+
 
 <br>
 <a name="Change-the-MySQL-Version"></a>
@@ -1197,21 +1167,21 @@ If you need <a href="#MySQL-access-from-host">MySQL access from your host</a>, d
 <a name="Use-custom-Domain"></a>
 ## Use custom Domain (instead of the Docker IP)
 
-Assuming your custom domain is `laravel.test`
+Assuming your custom domain is `laravel.dev`
 
-1 - Open your `/etc/hosts` file and map your localhost address `127.0.0.1` to the `laravel.test` domain, by adding the following:
+1 - Open your `/etc/hosts` file and map your localhost address `127.0.0.1` to the `laravel.dev` domain, by adding the following:
 
 ```bash
-127.0.0.1    laravel.test
+127.0.0.1    laravel.dev
 ```
 
-2 - Open your browser and visit `{http://laravel.test}`
+2 - Open your browser and visit `{http://laravel.dev}`
 
 
 Optionally you can define the server name in the NGINX configuration file, like this:
 
 ```conf
-server_name laravel.test;
+server_name laravel.dev;
 ```
 
 
@@ -1742,13 +1712,3 @@ This error sometimes happens because your Laravel application isn't running on t
 ## I get stuck when building nginx on `fetch http://mirrors.aliyun.com/alpine/v3.5/main/x86_64/APKINDEX.tar.gz`
 
 As stated on [#749](https://github.com/laradock/laradock/issues/749#issuecomment-293296687), removing the line `RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/' /etc/apk/repositories` from `nginx/Dockerfile` solves the problem.		
-
-## Custom composer repo packagist url and npm registry url
-
-In China, the origin source of composer and npm is very slow. You can add `WORKSPACE_NPM_REGISTRY` and `WORKSPACE_COMPOSER_REPO_PACKAGIST` config in `.env` to use your custom source.
-
-Example:
-```bash
-WORKSPACE_NPM_REGISTRY=https://registry.npm.taobao.org
-WORKSPACE_COMPOSER_REPO_PACKAGIST=https://packagist.phpcomposer.com
-```
