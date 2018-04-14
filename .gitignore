@@ -19,6 +19,7 @@
 /memcached
 /minio
 /mssql
+/neo4j
 /percona
 /pgadmin
 /postgres-postgis
