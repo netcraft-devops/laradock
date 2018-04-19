@@ -161,64 +161,53 @@ services:
       networks:
         - backend
 
-### MongoDB Container #######################################
+### MongoDB Replicaset Container #######################################
 
-    mongo:
-      build: ./mongo
-      ports:
-        - "${MONGODB_PORT}:27017"
-      volumes:
-        - ${DATA_SAVE_PATH}/mongo:/data/db
-      networks:
-        - backend
     mongo1:
       build: ./mongo
+      image: ongoworks/mongo-rep-set:latest
       volumes:
         - ${DATA_SAVE_PATH}/mongo1:/data/db
+      ports:
+        - "${MONGODB_1_PORT}:27017"
       networks:
         - backend
       restart: always
       environment:
         MONGO_ROLE: primary
       tty: true
-      hostname: mongo1
-      image: ongoworks/mongo-rep-set:latest
-      links:
-      - mongo2:mongo2
-      - mongo3:mongo3
       stdin_open: true
+      container_name: mongo1
 
     mongo2:
       build: ./mongo
+      image: ongoworks/mongo-rep-set:latest
       volumes:
         - ${DATA_SAVE_PATH}/mongo2:/data/db
+      ports:
+        - "${MONGODB_2_PORT}:27017"
       networks:
         - backend
       restart: always
       tty: true
-      hostname: mongo2
-      image: ongoworks/mongo-rep-set:latest
-      links:
-      - mongo1:mongo1
-      - mongo3:mongo3
       stdin_open: true
+      container_name: mongo2
 
     mongo3:
       build: ./mongo
+      image: ongoworks/mongo-rep-set:latest
       volumes:
         - ${DATA_SAVE_PATH}/mongo3:/data/db
+      ports:
+        - "${MONGODB_3_PORT}:28017"
       networks:
         - backend
       restart: always
+      tty: true
+      stdin_open: true
       environment:
         JOURNALING: 'no'
-      tty: true
-      hostname: mongo3
-      image: ongoworks/mongo-rep-set:latest
-      links:
-      - mongo1:mongo1
-      - mongo2:mongo2
-      stdin_open: true
+      container_name: mongo3
 
 ### Redis Container #########################################
 
@@ -252,26 +241,40 @@ services:
 
     elasticsearch:
       build: ./elasticsearch
-      volumes:
-        - ${DATA_SAVE_PATH}/elasticsearch-data:/usr/share/elasticsearch/data
-        - ${DATA_SAVE_PATH}/elasticsearch-plugins:/usr/share/elasticsearch/plugins
+      container_name: elasticsearch
       environment:
         - cluster.name=laradock-cluster
         - bootstrap.memory_lock=true
-        - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       ulimits:
         memlock:
           soft: -1
           hard: -1
-      mem_limit: 512m
+      volumes:
+        - elasticsearch-data:/usr/share/elasticsearch/data
       ports:
-        - "${ELASTICSEARCH_HOST_HTTP_PORT}:9200"
-        - "${ELASTICSEARCH_HOST_TRANSPORT_PORT}:9300"
-      depends_on:
-        - php-fpm
+        - 9200:9200
       networks:
-        - frontend
         - backend
+        - frontend
+
+    elasticsearch2:
+      build: ./elasticsearch
+      container_name: elasticsearch2
+      environment:
+        - cluster.name=laradock-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        - "discovery.zen.ping.unicast.hosts=elasticsearch"
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+      volumes:
+        - elasticsearch-data2:/usr/share/elasticsearch/data
+      networks:
+        - backend
+        - frontend
 
 ### Transporter Container #################################
 
@@ -352,11 +355,17 @@ networks:
 volumes:
   mysql:
     driver: "local"
-  mongo:
+  mongo1:
+    driver: "local"
+  mongo2:
+    driver: "local"
+  mongo3:
     driver: "local"
   phpmyadmin:
     driver: "local"
   elasticsearch-data:
+    driver: "local"
+  elasticsearch-data2:
     driver: "local"
   elasticsearch-plugins:
     driver: "local"
